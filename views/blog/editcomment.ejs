@@ -1,0 +1,12 @@
+<% include ../partials/header %>
+<div class="card">
+            <h5 class="card-title m-2">Edit Comment on <%=blog.title%></h5>
+            <form action="/<%=blog._id%>/<%=comment._id%>/?_method=PUT" method="POST" class="m-2">
+              <div class="form-group">
+                  <textarea class="form-control" id="content" name="comment[text]" placeholder="Add your comment...." required><%=comment.text%></textarea>
+              </div>
+              <button type="submit" class="btn btn-outline-warning mb-3">Edit</button>
+            </form>
+</div>
+
+<% include ../partials/footer %>

@@ -1,0 +1,24 @@
+<% include ../partials/header %>
+    <h1 class="display-4 mx-2">Add a new blog post</h1>
+    <div class="container mx-2">
+        <form action="/" method="POST">
+          <div class="form-group">
+            <label for="title">Post title/heading *</label>
+            <input type="text" class="form-control" id="title" placeholder="Post title/heading" name="blog[title]" required>
+          </div>
+          <div class="form-group">
+            <label for="byline">By-line</label>
+            <input type="text" class="form-control" id="byline" name="blog[byline]" placeholder="A short by-line">
+          </div>
+          <div class="form-group">
+            <label for="image">Post Image</label>
+            <input type="text" class="form-control" id="image" name="blog[image]" value="http://source.unsplash.com/cckf4TsHAuw" placeholder="Image URL">
+          </div>
+          <div class="form-group">
+              <label for="content">Post Content *</label>
+              <textarea class="form-control" id="content" rows="20" name="blog[content]" placeholder="Post content...." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-outline-success btn-lg mb-3">Post</button>
+        </form>
+    </div>
+<% include ../partials/footer %>

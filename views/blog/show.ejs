@@ -1,0 +1,67 @@
+<% include ../partials/header %>
+<div class="row">
+    <div class="col-lg-2 col-sm-12"></div>
+    <div class="col-lg-8 col-sm-12 mx-2">
+        <h1 class="display-4"><%=blog.title%></h1>
+        <p class="text-muted"><%=blog.byline%></p>
+        <img class="card-img-top mb-2" src="<%=blog.image%>" alt="Card image cap">
+        <p class="text-muted"><%=blog.created.toDateString()%></p>
+        <p class="card-text"><%-blog.content%></p>
+        <p class="text-muted"><em>Posted by <%=blog.author.firstName%>&nbsp;<%=blog.author.lastName%></em></p>
+        <a href="/" class="btn btn-outline-primary">Go Back</a>
+        <% if((currentUser)&&(currentUser.isAdmin)){ %>
+        <a href="/<%=blog._id%>/edit" class="btn btn-outline-warning ml-3">Edit</a>
+        <form action="/<%=blog._id%>/?_method=DELETE" method="POST"><button class="btn btn-outline-danger my-3">Delete</button></form>
+        <% } %>
+        
+        <div class="card my-3">
+            <h5 class="card-title m-2">Comments</h5>
+            <h6 class="card-subtitle m-2">Add Comment</h6>
+            <% if(!currentUser){ %>
+            <div class="card-text">
+                <p class="card-text font-weight-bold m-2">You have to be logged in to add a comment</p>
+                <a href="/login" class="btn btn-outline-success m-2">Login</a>
+            </div>
+            <% }else{ %>
+            <form action="/<%=blog._id%>" method="POST" class="m-2">
+              <div class="form-group">
+                    <label id="disabledInput">Display Name</label>
+                    <input type="text" class="form-control" id="disabledInput" name="comment[author]" placeholder="Display Name" value="<%=currentUser.firstName%> <%=currentUser.lastName%>" required>
+              </div>
+              <div class="form-group">
+                  <textarea class="form-control" id="content" name="comment[text]" placeholder="Add your comment...." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-outline-success mb-3">Add</button>
+            </form>
+            <% } %>
+
+
+            <% blog.comments.forEach(function(comment){ %>
+                <% comment.created.setHours(comment.created.getHours() + 5); %>
+                <% comment.created.setMinutes(comment.created.getMinutes() + 30);%>
+                <div class="card-text m-2"><strong><%=comment.author.firstName%>&nbsp;<%=comment.author.lastName%></strong>
+                <% if(comment.author.isAdmin){ %>
+                    <em>(Blog Administrator)</em>
+                <% } %>
+                &nbsp;-&nbsp;
+                <% if(comment.text != null){ %>
+                <%=comment.text%>
+                <% }else{ %>
+                 said something
+                <% } %>
+                <p class="text-muted "><%=comment.created.toDateString()%>&nbsp;at&nbsp;&nbsp;<%=comment.created.getHours()%>:<%=comment.created.getMinutes()%>&nbsp;hours</p>
+                <% if(currentUser){ %>
+                    <% if(comment.author.id.equals(currentUser._id)){ %>
+                    <a href="/<%=blog._id%>/<%=comment._id%>/edit" class="btn btn-outline-warning btn-sm mb-1">Edit</a>
+                    <% } %>
+                <% } %>
+               <% if((currentUser)&&(currentUser.isAdmin)){ %>
+                 <form action="/<%=blog._id%>/<%=comment._id%>/?_method=DELETE" method="POST"><button class="btn btn-sm btn-outline-danger">Delete</button></form>
+               <% } %>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+    <div class="col-lg-2 col-sm-12"></div>
+</div>
+<% include ../partials/footer %>
