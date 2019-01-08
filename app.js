@@ -19,6 +19,7 @@ app.use(methodOverride("_method"));
 app.use(flash());
 mongoose.connect(process.env.DATABASEURL);
 
+
 //Passport Configuration
 app.use(require("express-session")({
     secret: "Unbelievable",
@@ -41,8 +42,9 @@ app.use(function(req, res, next){
 // Root Route
 app.get("/", function(req,res){
     Blog.find({}, function(err, Blogs){
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!Blogs)){
+            req.flash("error","Could not find blog post");
+            res.redirect("/");
         }
         else{
             res.render("blog/showblogs", {blogList:Blogs});
@@ -64,17 +66,17 @@ app.post("/register", function(req, res){
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         email: req.body.email,
-        phone: req.body.avatar
+        phone: req.body.phone
       });
     
-    if(req.body.adminCode === 'Saranam Swami') {
+    if(req.body.adminCode === process.env.ADMINCODE) {
       newUser.isAdmin = true;
     }
     
     User.register(newUser, req.body.password, function(err, user){
-        if(err){
+        if(err || (!user)){
             req.flash("error",err.message);
-            return res.render("blog/register");
+            return res.redirect("/register");
         }
         passport.authenticate("local")(req, res, function(){
            req.flash("success", "Successfully registered....\n Welcome "+ user.firstName);
@@ -92,20 +94,19 @@ app.get("/login", function(req, res) {
 //Handle login request
 app.post("/login", function (req, res, next) {
     User.findOne({username: req.body.username}, function(err, User){
-        if(err){
+        if(err || (!User)){
             console.log(err);
-            var name = req.body.username;
+            req.flash("error","Username is wrong....");
+            return res.redirect("/login");
         }else{
-            name = User.firstName;
+            passport.authenticate("local",
+            {
+                  successRedirect: "/",
+                  failureRedirect: "/login",
+                  successFlash: "Welcome "+ User.firstName,
+                  failureFlash: "Password is wrong...."
+                })(req, res);
         }
-        passport.authenticate("local",
-        {
-              successRedirect: "/",
-              failureRedirect: "/login",
-              successFlash: "Welcome "+ name,
-              failureFlash: "Username/password is wrong...."
-            })(req, res);
-            
         });
     });
   
@@ -128,8 +129,8 @@ app.post("/", isAdminIn, function(req,res){
     req.body.blog.author = req.user;
     req.body.blog.content = req.sanitize(req.body.blog.content);
    Blog.create(req.body.blog, function(err, newblog){
-       if(err){
-           req.flash("error",err.message);
+       if(err ||(!newblog)){
+           req.flash("error","Something went wrong....");
            res.redirect("back");
        }
        else{
@@ -143,8 +144,8 @@ app.post("/", isAdminIn, function(req,res){
 //Render the show page for each blog
 app.get("/:id",function(req, res) {
     Blog.findById(req.params.id).populate("comments").exec(function(err, foundBlog){
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }
         else{
@@ -157,8 +158,8 @@ app.get("/:id",function(req, res) {
 //Render the edit page for each blog
 app.get("/:id/edit", isAdminIn,  function(req, res) {
     Blog.findById(req.params.id,function(err, foundBlog){
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             res.render("blog/edit",{blog:foundBlog});
@@ -169,8 +170,8 @@ app.get("/:id/edit", isAdminIn,  function(req, res) {
 //Handle the edit request
 app.put("/:id", isAdminIn, function(req,res){
     Blog.findByIdAndUpdate(req.params.id, req.body.blog, function(err, edittedBlog){
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!edittedBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             req.flash("success","Blog post editted....");
@@ -183,7 +184,7 @@ app.put("/:id", isAdminIn, function(req,res){
 app.delete("/:id", isAdminIn, function(req,res){
    Blog.findByIdAndRemove(req.params.id, function(err){
        if(err){
-           req.flash("error",err.message);
+           req.flash("error","Something went wrong....");
            res.redirect("back");
        }else{
            req.flash("success","Blog post deleted....");
@@ -196,13 +197,13 @@ app.delete("/:id", isAdminIn, function(req,res){
 //Handle comment post route
 app.post("/:id", isLoggedIn, function(req,res){
     Blog.findById(req.params.id, function(err, foundBlog) {
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             Comment.create(req.body.comment, function(err, newComment){
-                if(err){
-                    req.flash("error",err.message);
+                if(err || (!newComment)){
+                    req.flash("error","Something went wrong....");
                     res.redirect("back");
                 }else{
                     newComment.author.id = req.user._id;
@@ -212,7 +213,7 @@ app.post("/:id", isLoggedIn, function(req,res){
                     newComment.save();
                    foundBlog.comments.push(newComment);
                     foundBlog.save();
-                    req.flash("success","Comment added....");
+                    req.flash("success"," comment added....");
                     res.redirect("/"+req.params.id);
                 }
             });
@@ -224,13 +225,13 @@ app.post("/:id", isLoggedIn, function(req,res){
 //Show the comment edit form
 app.get("/:id/:commentid/edit",checkCommentOwnership , function(req, res) {
     Blog.findById(req.params.id, function(err, foundBlog) {
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             Comment.findById(req.params.commentid, function(err, foundComment) {
-                if(err){
-                    req.flash("error",err.message);
+                if(err || (!foundComment)){
+                    req.flash("error","Something went wrong....");
                     res.redirect("back");
                 }else{
                     res.render("blog/editcomment", {comment:foundComment,blog:foundBlog});
@@ -242,13 +243,13 @@ app.get("/:id/:commentid/edit",checkCommentOwnership , function(req, res) {
 //Handle edit request
 app.put("/:id/:commentid",checkCommentOwnership, function(req,res){
     Blog.findById(req.params.id,function(err, foundBlog) {
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             Comment.findByIdAndUpdate(req.params.commentid, req.body.comment, function(err, edittedComment){
-                if(err){
-                    req.flash("error",err.message);
+                if(err || (!edittedComment)){
+                    req.flash("error","Something went wrong....");
                     res.redirect("back");
                 }else{
                     req.flash("success","Comment editted....");
@@ -262,8 +263,8 @@ app.put("/:id/:commentid",checkCommentOwnership, function(req,res){
 //Delete comment
 app.delete("/:id/:commentid", isAdminIn, function(req,res){
     Blog.findById(req.params.id, function(err, foundBlog) {
-        if(err){
-            req.flash("error",err.message);
+        if(err || (!foundBlog)){
+            req.flash("error","Something went wrong....");
             res.redirect("back");
         }else{
             Comment.findByIdAndRemove(req.params.commentid, function(err){
@@ -285,9 +286,11 @@ function isLoggedIn(req, res, next){
     if(req.isAuthenticated()){
         req.flash("success","Welcome "+req.user.firstName);
         return next();
+    }else{
+        req.flash("error","Please login to do that....");
+        res.redirect("/login");
     }
-    req.flash("error","Please login to do that....");
-    res.redirect("/login");
+    
 }
 
 // To check whether Admin is logged in
@@ -311,7 +314,7 @@ function checkCommentOwnership(req,res,next){
         Comment.findById(req.params.commentid, function(err, foundComment){
            if((err) || (!foundComment)){
                console.log(err);
-               req.flash("error", err.message);
+               req.flash("error", "Something went wrong....");
                 res.redirect("back");
 
            }  else {
@@ -333,4 +336,5 @@ function checkCommentOwnership(req,res,next){
 
 app.listen(process.env.PORT, process.env.IP, function(){
    console.log("Blog App Started!!");
+   
 });
